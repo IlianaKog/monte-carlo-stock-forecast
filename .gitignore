@@ -1,4 +1,5 @@
 build/
 output/*.json
+data/
 *.user
 .vs/
