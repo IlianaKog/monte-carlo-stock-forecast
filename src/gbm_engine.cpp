@@ -16,14 +16,17 @@ GBMParams MonteCarloEngine::estimate_params(const std::vector<double>& log_retur
         throw std::runtime_error("Cannot estimate GBM params from empty returns");
 
     const double n = static_cast<double>(log_returns.size());
-    const double mu = std::accumulate(log_returns.begin(), log_returns.end(), 0.0) / n;
+    const double mu_daily = std::accumulate(log_returns.begin(), log_returns.end(), 0.0) / n;
 
     double variance = 0.0;
     for (double r : log_returns)
-        variance += (r - mu) * (r - mu);
+        variance += (r - mu_daily) * (r - mu_daily);
     variance /= (n - 1.0);
+    const double sigma_daily = std::sqrt(variance);
 
-    return {mu, std::sqrt(variance), last_price};
+    // Annualize: dt=1/252 in run() expects annualized params.
+    // mu scales linearly, sigma scales by sqrt(252) (square-root-of-time rule).
+    return {mu_daily * 252.0, sigma_daily * std::sqrt(252.0), last_price};
 }
 
 SimulationPaths MonteCarloEngine::run(const GBMParams& params,
