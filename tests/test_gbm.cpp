@@ -19,11 +19,11 @@ extern int failures;
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void test_estimate_params_known_data() {
-    // Constant log return of 0.01 every day → mu = 0.01, sigma = 0
+    // Constant daily return of 0.01 → annualized: mu = 0.01*252
     MonteCarloEngine engine;
     std::vector<double> returns(100, 0.01);
     auto params = engine.estimate_params(returns, 100.0);
-    EXPECT_NEAR(params.mu, 0.01, 1e-10);
+    EXPECT_NEAR(params.mu, 0.01 * 252.0, 1e-8);
     EXPECT_NEAR(params.sigma, 0.0, 1e-6);
     EXPECT_NEAR(params.S0, 100.0, 1e-10);
 }

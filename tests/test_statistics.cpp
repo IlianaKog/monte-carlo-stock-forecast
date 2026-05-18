@@ -85,11 +85,11 @@ int run_statistics_tests() {
 }
 
 int main() {
-    int f = run_gbm_tests();
-    f += run_statistics_tests();
-    if (f == 0)
+    run_gbm_tests();
+    run_statistics_tests();
+    if (failures == 0)
         std::cout << "All tests passed.\n";
     else
-        std::cerr << f << " test(s) FAILED.\n";
-    return f > 0 ? 1 : 0;
+        std::cerr << failures << " test(s) FAILED.\n";
+    return failures > 0 ? 1 : 0;
 }
