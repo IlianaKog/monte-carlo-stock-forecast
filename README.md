@@ -183,6 +183,16 @@ Download from Yahoo Finance manually, or add a ticker to `download_data.py` and 
 
 ---
 
+## Performance Notes
+
+**Thread-local PRNGs, not a shared mutex.**
+Each OpenMP thread owns its own `std::mt19937_64`, seeded with `base_seed + thread_id`. The alternative — a single shared generator behind a `std::mutex` — would serialize every random number draw, causing lock contention that eliminates any parallelism gain and adds OS context-switch overhead on top. Thread-local generators cost nothing at synchronization and scale linearly with core count.
+
+**Row-major memory layout for cache efficiency.**
+Simulation paths are stored as `paths[sim_index][day_index]`. The inner loop always advances along the day axis (`d = 0 … N`), so each iteration reads the next element in the same cache line already loaded from the previous step. On a typical 64-byte cache line (8 doubles), the CPU prefetches 8 days at once — subsequent accesses are L1 hits. A transposed layout (`paths[day][sim]`) would cause a cache miss on every step of every path.
+
+---
+
 ## License
 
 MIT
