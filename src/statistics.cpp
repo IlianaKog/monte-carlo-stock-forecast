@@ -4,15 +4,23 @@
 #include <numeric>
 #include <stdexcept>
 
+// By-value overload: copies and sorts internally.
+// Used by day_percentile_path where each column vector is already a fresh copy.
 double Statistics::percentile(std::vector<double> v, double pct) {
     if (v.empty()) throw std::runtime_error("Empty vector in percentile()");
     std::sort(v.begin(), v.end());
-    double idx = pct * (static_cast<double>(v.size()) - 1.0);
+    return percentile_sorted(v, pct);
+}
+
+// O(1) lookup --> caller must guarantee the vector is already sorted.
+double Statistics::percentile_sorted(const std::vector<double>& sorted_v, double pct) {
+    if (sorted_v.empty()) throw std::runtime_error("Empty vector in percentile_sorted()");
+    double idx = pct * (static_cast<double>(sorted_v.size()) - 1.0);
     size_t lo  = static_cast<size_t>(idx);
     size_t hi  = lo + 1;
-    if (hi >= v.size()) return v.back();
+    if (hi >= sorted_v.size()) return sorted_v.back();
     double frac = idx - static_cast<double>(lo);
-    return v[lo] * (1.0 - frac) + v[hi] * frac; // linear interpolation
+    return sorted_v[lo] * (1.0 - frac) + sorted_v[hi] * frac;
 }
 
 std::vector<double> Statistics::day_percentile_path(const SimulationPaths& sim, double pct) {
@@ -42,7 +50,6 @@ SimulationResult Statistics::compute(const std::string& symbol,
                                      const SimulationPaths& sim) {
     const int n = sim.num_simulations;
 
-    // collect final prices
     std::vector<double> finals(n);
     for (int i = 0; i < n; ++i)
         finals[i] = sim.paths[i][sim.num_days];
@@ -57,6 +64,9 @@ SimulationResult Statistics::compute(const std::string& symbol,
     for (double f : finals)
         if (f > params.S0) profit_count += 1.0;
 
+    // Single sort — all percentile lookups below are O(1)
+    std::sort(finals.begin(), finals.end());
+
     SimulationResult r;
     r.symbol              = symbol;
     r.num_simulations     = n;
@@ -66,16 +76,16 @@ SimulationResult Statistics::compute(const std::string& symbol,
     r.sigma               = params.sigma;
     r.mean_final_price    = mean;
     r.std_dev             = std::sqrt(variance);
-    r.var_95              = percentile(finals, 0.05); // worst 5%
-    r.var_99              = percentile(finals, 0.01); // worst 1%
+    r.var_95              = percentile_sorted(finals, 0.05); // worst 5%
+    r.var_99              = percentile_sorted(finals, 0.01); // worst 1%
     r.probability_of_profit  = profit_count / n;
     r.expected_return_pct    = (mean / params.S0 - 1.0) * 100.0;
-    r.final_percentiles   = {
-        percentile(finals, 0.05),
-        percentile(finals, 0.25),
-        percentile(finals, 0.50),
-        percentile(finals, 0.75),
-        percentile(finals, 0.95)
+    r.final_percentiles  = {
+        percentile_sorted(finals, 0.05),
+        percentile_sorted(finals, 0.25),
+        percentile_sorted(finals, 0.50),
+        percentile_sorted(finals, 0.75),
+        percentile_sorted(finals, 0.95)
     };
     r.path_mean = day_mean_path(sim);
     r.path_p5   = day_percentile_path(sim, 0.05);

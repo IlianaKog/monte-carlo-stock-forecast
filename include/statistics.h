@@ -41,7 +41,8 @@ public:
                                     const SimulationPaths& sim);
 
 private:
-    static double percentile(std::vector<double> v, double pct); // by value — sorts copy
+    static double percentile(std::vector<double> v, double pct); // by value — sorts copy, used for day paths
+    static double percentile_sorted(const std::vector<double>& sorted_v, double pct); // O(1) — requires pre-sorted input
     static std::vector<double> day_percentile_path(const SimulationPaths& sim, double pct);
     static std::vector<double> day_mean_path(const SimulationPaths& sim);
 };
